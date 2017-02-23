@@ -1,3 +1,5 @@
+from switch import Switch
+
 class MetaDataRules:
     def __init__(self):
         pass
@@ -26,6 +28,14 @@ class MetaDataRules:
         return rule
 
     @staticmethod
+    def delete(form_id, field_id):
+        rule = "Delete[[-SEP-]]" \
+               + str(form_id) + "[[-SEP-]]" \
+               + str(field_id) + "[[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[" \
+                                 "-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]"
+        return rule
+
+    @staticmethod
     def stringToDate(destination_field_id, source_field_id):
         rule = "NumberStringToDate[[-SEP-]]" \
                + str(destination_field_id) + "[[-SEP-]]" \
@@ -42,13 +52,13 @@ class MetaDataRules:
         dest_str = ""
 
         for i in range(len(source_field_values)):
-            if i == len(source_field_values)-1:
+            if i == len(source_field_values) - 1:
                 source_str += source_field_values[i]
             else:
                 source_str += source_field_values[i] + ","
 
         for i in range(len(destination_field_values)):
-            if i == len(destination_field_values)-1:
+            if i == len(destination_field_values) - 1:
                 dest_str += destination_field_values[i]
             else:
                 dest_str += destination_field_values[i] + ","
@@ -69,4 +79,48 @@ class MetaDataRules:
             .replace("SOURCE_FIELD_VALUES", source_str) \
             .replace("DEST_FORM_ID", destination_id) \
             .replace("DESTINATION_FIELD_VALUES", dest_str)
+        return rule
+
+    @staticmethod
+    def customFileOutput(source_headers, source_field_ids, source_id, export_title, file_path, variable):
+
+        source_head_str = ""
+        source_id_str = ""
+
+        for i in range(len(source_headers)):
+            if i == len(source_headers) - 1:
+                source_head_str += source_headers[i]
+            else:
+                source_head_str += source_headers[i] + ","
+
+        for i in range(len(source_field_ids)):
+            if i == len(source_field_ids) - 1:
+                source_id_str += source_field_ids[i]
+            else:
+                source_id_str += source_field_ids[i] + ","
+
+        with Switch(variable) as case:
+            if case('TXT'):
+                rule = "Output_CustomFileOutput[[-SEP-]]FORM_ID[[-SEP-]]HEADERS[[-SEP-]]FIELD_IDS[[-SEP-]]SFTP[[" \
+                       "-SEP-]]TITLE[[-SEP-]]|[[-SEP-]][[-SEP-]]\\[[-SEP-]]\n[[-SEP-]]1000000000[[" \
+                       "-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]FILEPATH[[-SEP-]][[-SEP-]][[-SEP-]]"
+
+                rule = rule.encode('string-escape') \
+                    .replace("FORM_ID", str(source_id)) \
+                    .replace("HEADERS", str(source_head_str)) \
+                    .replace("FIELD_IDS", str(source_id_str)) \
+                    .replace("TITLE", str(export_title)) \
+                    .replace("FILEPATH", str(file_path))
+
+            if case('CSV'):
+                rule = "Output_CustomFileOutput[[-SEP-]]FORM_ID[[-SEP-]]HEADERS[[-SEP-]]FIELD_IDS[[-SEP-]]SFTP[[" \
+                       "-SEP-]]TITLE[[-SEP-]],[[-SEP-]]DoubleComma[[-SEP-]]\\[[-SEP-]]\n[[-SEP-]]1000000000[[" \
+                       "-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]FILEPATH[[-SEP-]][[-SEP-]][[-SEP-]]"
+
+                rule = rule.encode('string-escape') \
+                    .replace("FORM_ID", str(source_id)) \
+                    .replace("HEADERS", str(source_head_str)) \
+                    .replace("FIELD_IDS", str(source_id_str)) \
+                    .replace("TITLE", str(export_title)) \
+                    .replace("FILEPATH", str(file_path))
         return rule

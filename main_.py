@@ -21,6 +21,11 @@ def display_setConcat():
     entry_box.insert(1.0, result)
 
 
+def display_delete():
+    result = MetaDataRules.delete(form_id.get(), delete_field.get())
+    entry_box.insert(1.0, result)
+
+
 def display_setDateUDT():
     result = MetaDataRules.stringToDate(d_field.get(), s_field.get())
     entry_box.insert(1.0, result)
@@ -32,9 +37,22 @@ def display_crossDB_insert():
     entry_box.insert(1.0, result)
 
 
-class MainWindow(tk.Frame):
-    counter = 0
+def display_custom_file_output():
+    result = MetaDataRules.customFileOutput(source_headers, source_fieldIDs, source_id, export_title.get(),
+                                            file_path.get(), variable.get())
+    entry_box.delete(1.0, 'end')
+    entry_box.insert(1.0, result)
 
+
+def copy_to_clipboard():
+    clip = Tk()
+    clip.withdraw()
+    clip.clipboard_clear()
+    clip.clipboard_append(entry_box.get(1.0, END))
+    clip.destroy()
+
+
+class MainWindow(tk.Frame):
     def __init__(self, *args, **kwargs):
         tk.Frame.__init__(self, *args, **kwargs)
         menu = tk.Menu(root)
@@ -43,19 +61,25 @@ class MainWindow(tk.Frame):
         sub_process_string = tk.Menu(menu)
         sub_process_date = tk.Menu(menu)
         sub_process_cross_db = tk.Menu(menu)
+        sub_process_import_export = tk.Menu(menu)
 
         menu.add_cascade(label="String Process Rules", menu=sub_process_string)
         menu.add_cascade(label="Date Process Rules", menu=sub_process_date)
         menu.add_cascade(label="Cross Database Rules", menu=sub_process_cross_db)
+        menu.add_cascade(label="Import/Export Rules", menu=sub_process_import_export)
 
         sub_process_string.add_command(label="Set Value", command=self.captureSetValue)
         sub_process_string.add_command(label="Concat", command=self.captureSetConcat)
+        sub_process_string.add_command(label="Delete", command=self.captureDelete)
         sub_process_string.add_separator()
         # sub_process_string.add_command(label="Exit", command=leave)
 
         sub_process_date.add_command(label="String to Date (UDT)", command=self.captureDate)
 
         sub_process_cross_db.add_command(label="Cross Database Insert", command=self.captureCrossDBInsert)
+
+        sub_process_import_export.add_command(label="Custom File Output TXT|CSV",
+                                              command=self.captureCustomFileOutput_txt)
 
     def captureSetValue(self):
         window = tk.Toplevel(self)
@@ -126,6 +150,32 @@ class MainWindow(tk.Frame):
         entry_box = Text(window, width=60, height=6)
         entry_box.grid(row=4, column=1)
 
+    def captureDelete(self):
+        window = tk.Toplevel(self)
+        window.wm_title("Set Value")
+
+        Label(window, text="Enter Form ID: ").grid(row=0)
+        Label(window, text="Enter Field ID To Delete: ").grid(row=1)
+
+        global form_id
+        global delete_field
+        global entry_box
+
+        form_id = Entry(window)
+        delete_field = Entry(window)
+
+        form_id.grid(row=0, column=1)
+        delete_field.grid(row=1, column=1)
+
+        btn = Button(window, text="Create Rule", command=display_delete)
+        btn2 = Button(window, text="Copy to clipboard", command=copy_to_clipboard)
+
+        btn.grid(row=3, column=0)
+        btn2.grid(row=4, column=1)
+
+        entry_box = Text(window, width=60, height=4)
+        entry_box.grid(row=3, column=1)
+
     def captureDate(self):
         window = tk.Toplevel(self)
         window.wm_title("Convert to UDT")
@@ -152,8 +202,10 @@ class MainWindow(tk.Frame):
 
     def captureCrossDBInsert(self):
         try:
+            global window
             window = tk.Toplevel(self)
             window.wm_title("Cross Database Insert")
+            message.showinfo("Process", "Please select the excel file containing the source & destination field IDs")
             root.fileName = filedialog.askopenfilename(filetypes=(("Excel Files", "*.xlsx"), ("All files", "*.*")))
 
             # This workbook object represents the excel file
@@ -169,10 +221,9 @@ class MainWindow(tk.Frame):
             global entry_box
 
             source_field_IDs = []
-
             destination_fieldIDs = []
 
-            for i in range(2, sheet1.max_row):
+            for i in range(2, sheet1.max_row + 1):
                 source_field_IDs.append(sheet1.cell(row=i, column=1).value)
                 destination_fieldIDs.append(sheet1.cell(row=i, column=2).value)
 
@@ -185,16 +236,86 @@ class MainWindow(tk.Frame):
 
             source_form = "strCDA_" + source_form_id + "_"
 
-            entry_box = Text(window, width=70, height=8)
+            entry_box = Text(window, width=75, height=22)
             entry_box.grid(row=3, column=1)
 
             btn = Button(window, text="Create Rule", command=
             display_crossDB_insert)
 
+            btn2 = Button(window, text="Copy to clipboard", command=copy_to_clipboard)
+
             btn.grid(row=3, column=0)
+            btn2.grid(row=4, column=1)
 
             message.showinfo("Success", "The excel file has been loaded \n Select Create Rule")
-            window.geometry('630x200+500+350')
+            window.geometry('730x400+300+330')
+
+        except EnvironmentError:
+            message.showerror("Result", "There is an error with your file")
+
+    def captureCustomFileOutput_txt(self):
+        try:
+            window = tk.Toplevel(self)
+            window.wm_title("Cross Database Insert")
+
+            message.showinfo("Process", "Please select the excel file containing the Headers & field IDs")
+            root.fileName = filedialog.askopenfilename(filetypes=(("Excel Files", "*.xlsx"), ("All files", "*.*")))
+
+            # This workbook object represents the excel file
+            work_book = openpyxl.load_workbook(root.fileName)
+
+            sheet1 = work_book.get_sheet_by_name('Sheet1')
+
+            global source_headers
+            global source_fieldIDs
+            global source_id
+            global entry_box
+
+            source_headers = []
+            source_fieldIDs = []
+
+            for i in range(2, sheet1.max_row + 1):
+                source_headers.append(sheet1.cell(row=i, column=1).value)
+                source_fieldIDs.append(sheet1.cell(row=i, column=2).value)
+
+            source_id = re.findall(r'\d+', source_fieldIDs[1])[:1]
+            source_id = source_id[0]
+
+            entry_box = Text(window, width=75, height=22)
+            entry_box.grid(row=5, column=1)
+
+            global variable
+
+            choices = ['TXT', 'CSV']
+            variable = StringVar(window)
+            variable.set(choices[0])
+
+            op_menu = OptionMenu(window, variable, *choices)
+
+            Label(window, text="Enter The Export Title: ").grid(row=1)
+            Label(window, text="Enter The File Path: ").grid(row=2)
+            Label(window, text="Select the Output format:").grid(row=3)
+
+            global export_title
+            global file_path
+
+            export_title = Entry(window)
+            file_path = Entry(window)
+
+            export_title.grid(row=1, column=1)
+            file_path.grid(row=2, column=1)
+            op_menu.grid(row=3, column=1)
+
+            btn = Button(window, text="Create Rule", command=
+            display_custom_file_output)
+
+            btn2 = Button(window, text="Copy to clipboard", command=copy_to_clipboard)
+
+            btn.grid(row=5, column=0)
+            btn2.grid(row=6, column=1)
+
+            message.showinfo("Success", "The excel file has been loaded \n Select Create Rule")
+            window.geometry('840x470+300+330')
 
         except EnvironmentError:
             message.showerror("Result", "There is an error with your file")

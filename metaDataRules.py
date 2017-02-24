@@ -1,4 +1,7 @@
 from switch import Switch
+from operator import is_not
+from functools import partial
+
 
 class MetaDataRules:
     def __init__(self):
@@ -46,6 +49,21 @@ class MetaDataRules:
         return rule
 
     @staticmethod
+    def validate_BIC_IBAN(bic_iban, source_id, destination_id):
+        with Switch(bic_iban) as case:
+            if case('BIC'):
+                rule = "IbanBicValidation[[-SEP-]]BIC[[-SEP-]]" \
+                       + str(source_id) + "[[-SEP-]]" \
+                       + str(destination_id) + "[[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]" \
+                                               "[[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]"
+            if case('IBAN'):
+                rule = "IbanBicValidation[[-SEP-]]IBAN[[-SEP-]]" \
+                       + str(source_id) + "[[-SEP-]]" \
+                       + str(destination_id) + "[[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]" \
+                                               "[[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]"
+            return rule
+
+    @staticmethod
     def crossDbInsert(source_id, source_form, source_field_values,
                       destination_id, destination_field_values):
         source_str = ""
@@ -79,6 +97,55 @@ class MetaDataRules:
             .replace("SOURCE_FIELD_VALUES", source_str) \
             .replace("DEST_FORM_ID", destination_id) \
             .replace("DESTINATION_FIELD_VALUES", dest_str)
+        return rule
+
+    @staticmethod
+    def crossDbRetrieval(destination_ids, source_form_id, source_ids, source_ids_match, destination_vals_match):
+        destination_ids_str = ""
+        source_ids_str = ""
+        source_ids_match_str = ""
+        destination_vals_match_str = ""
+
+        source_form_id = str(source_form_id[0])
+
+        def removeNone(_list):
+            _list = filter(partial(is_not, None), _list)
+            return _list
+
+        destination_ids = removeNone(destination_ids)
+        source_ids = removeNone(source_ids)
+
+        for i in range(len(destination_ids)):
+            if i == len(destination_ids) - 1:
+                destination_ids_str += destination_ids[i]
+            else:
+                destination_ids_str += destination_ids[i] + ","
+        for i in range(len(source_ids)):
+            if i == len(source_ids) - 1:
+                source_ids_str += source_ids[i]
+            else:
+                source_ids_str += source_ids[i] + ","
+        for i in range(len(source_ids_match)):
+            if i == len(source_ids_match) - 1:
+                source_ids_match_str += source_ids_match[i]
+            else:
+                source_ids_match_str += source_ids_match[i] + ","
+        for i in range(len(destination_vals_match)):
+            if i == len(destination_vals_match) - 1:
+                destination_vals_match_str += destination_vals_match[i]
+            else:
+                destination_vals_match_str += destination_vals_match[i] + ","
+
+        rule = "CrossDatabase_Retrieval_Dynamic[[-SEP-]]Destination_Ids[[-SEP-]]Source_form_id[[" \
+               "-SEP-]]Source_Ids[[-SEP-]]Source_match[[-SEP-]]Destination_match" \
+               "[[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]" \
+               "[[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]][[-SEP-]]"
+
+        rule = rule.replace("Destination_Ids", destination_ids_str) \
+            .replace("Source_form_id", source_form_id) \
+            .replace("Source_Ids", source_ids_str) \
+            .replace("Source_match", source_ids_match_str) \
+            .replace("Destination_match", destination_vals_match_str)
         return rule
 
     @staticmethod
